@@ -1,14 +1,15 @@
 package me.tahacheji.mafana.processor;
 
-import me.tahacheji.mafana.processor.Cube;
-import me.tahacheji.mafana.processor.CubeDivider;
+import me.tahacheji.mafana.MafanaWorldProcessor;
 import me.tahacheji.mafana.processor.WorldBlock;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class WorldBlockGetter {
     private final World world;
@@ -21,20 +22,33 @@ public class WorldBlockGetter {
         this.y = y;
     }
 
-    public CompletableFuture<List<WorldBlock>> processCubeAsync(int divisions) {
+    public CompletableFuture<List<WorldBlock>> processCubeAsync(int divisions, long delayBetweenCubesTicks) {
         CompletableFuture<List<WorldBlock>> future = new CompletableFuture<>();
         CubeDivider divider = new CubeDivider(x, y);
         List<Cube> smallerCubes = divider.divide(divisions);
 
         List<WorldBlock> allBlocks = new ArrayList<>();
 
-        for (Cube cube : smallerCubes) {
-            List<WorldBlock> cubeBlocks = getWorldBlocksInCube(cube);
-            allBlocks.addAll(cubeBlocks);
+        processCubesRecursively(smallerCubes, allBlocks, 0, delayBetweenCubesTicks, future);
+
+        return future;
+    }
+
+    private void processCubesRecursively(List<Cube> cubes, List<WorldBlock> allBlocks, int currentIndex, long delayBetweenCubesTicks, CompletableFuture<List<WorldBlock>> future) {
+        if (currentIndex >= cubes.size()) {
+            future.complete(allBlocks);
+            return;
         }
 
-        future.complete(allBlocks);
-        return future;
+        Cube cube = cubes.get(currentIndex);
+
+        Bukkit.getScheduler().runTaskLater(MafanaWorldProcessor.getInstance(), () -> {
+            List<WorldBlock> cubeBlocks = getWorldBlocksInCube(cube);
+            allBlocks.addAll(cubeBlocks);
+
+            // Process the next cube with a delay
+            processCubesRecursively(cubes, allBlocks, currentIndex + 1, delayBetweenCubesTicks, future);
+        }, delayBetweenCubesTicks);
     }
 
     private List<WorldBlock> getWorldBlocksInCube(Cube cube) {

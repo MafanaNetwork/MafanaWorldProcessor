@@ -39,6 +39,7 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <outputFile>C:\Users\tahac\Desktop\plugins\MafanaWorldProcessor.jar</outputFile>
                         </configuration>
                     </execution>
                 </executions>

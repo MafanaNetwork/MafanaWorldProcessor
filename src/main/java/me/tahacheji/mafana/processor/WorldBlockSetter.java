@@ -17,8 +17,8 @@ public class WorldBlockSetter {
         this.executor = Executors.newCachedThreadPool(); // Adjust the executor as needed
     }
 
-    public CompletableFuture<Void> setWorldBlocksAsync(List<WorldBlock> worldBlocks, int batchSize) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
+    public CompletableFuture<World> setWorldBlocksAsync(List<WorldBlock> worldBlocks, int batchSize) {
+        CompletableFuture<World> future = new CompletableFuture<>();
         int totalBlocks = worldBlocks.size();
         int currentIndex = 0;
 
@@ -41,9 +41,16 @@ public class WorldBlockSetter {
             currentIndex += batchSize;
 
             // Combine the batchFuture with the overall future
-            future = future.thenCombineAsync(batchFuture, (result1, result2) -> null, executor);
+            future = future.thenComposeAsync(previousWorld -> batchFuture.thenApplyAsync(
+                    result -> {
+                        // Return the world after this batch is processed
+                        return previousWorld;
+                    },
+                    executor
+            ), executor);
         }
 
+        // When all batches are complete, return the final world
         return future;
     }
 }

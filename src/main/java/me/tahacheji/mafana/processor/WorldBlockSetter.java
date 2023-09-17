@@ -1,5 +1,7 @@
 package me.tahacheji.mafana.processor;
 
+import me.tahacheji.mafana.MafanaWorldProcessor;
+import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 
@@ -10,47 +12,40 @@ import java.util.concurrent.Executors;
 
 public class WorldBlockSetter {
     private final World world;
-    private final Executor executor;
 
     public WorldBlockSetter(World world) {
         this.world = world;
-        this.executor = Executors.newCachedThreadPool(); // Adjust the executor as needed
     }
 
-    public CompletableFuture<World> setWorldBlocksAsync(List<WorldBlock> worldBlocks, int batchSize) {
+    public CompletableFuture<World> setWorldBlocksAsyncWithDelay(List<WorldBlock> worldBlocks, int batchSize, long delayBetweenBatches) {
         CompletableFuture<World> future = new CompletableFuture<>();
-        int totalBlocks = worldBlocks.size();
         int currentIndex = 0;
 
-        // Create a separate CompletableFuture for each batch of blocks
-        while (currentIndex < totalBlocks) {
-            int endIndex = Math.min(currentIndex + batchSize, totalBlocks);
-            List<WorldBlock> batch = worldBlocks.subList(currentIndex, endIndex);
+        processBatch(worldBlocks, currentIndex, batchSize, delayBetweenBatches, future);
 
-            CompletableFuture<Void> batchFuture = CompletableFuture.runAsync(() -> {
-                try {
-                    for (WorldBlock worldBlock : batch) {
-                        Block block = world.getBlockAt(worldBlock.getX(), worldBlock.getY(), worldBlock.getZ());
-                        block.setType(worldBlock.getMaterial());
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }, executor);
-
-            currentIndex += batchSize;
-
-            // Combine the batchFuture with the overall future
-            future = future.thenComposeAsync(previousWorld -> batchFuture.thenApplyAsync(
-                    result -> {
-                        // Return the world after this batch is processed
-                        return previousWorld;
-                    },
-                    executor
-            ), executor);
-        }
-
-        // When all batches are complete, return the final world
         return future;
+    }
+
+    private void processBatch(List<WorldBlock> worldBlocks, int currentIndex, int batchSize, long delayBetweenBatches, CompletableFuture<World> future) {
+        int totalBlocks = worldBlocks.size();
+        int endIndex = Math.min(currentIndex + batchSize, totalBlocks);
+        List<WorldBlock> batch = worldBlocks.subList(currentIndex, endIndex);
+
+        Bukkit.getScheduler().runTaskLater(MafanaWorldProcessor.getInstance(), () -> {
+            try {
+                for (WorldBlock worldBlock : batch) {
+                    Block block = world.getBlockAt(worldBlock.getX(), worldBlock.getY(), worldBlock.getZ());
+                    block.setType(worldBlock.getMaterial());
+                }
+                if (endIndex < totalBlocks) {
+                    processBatch(worldBlocks, endIndex, batchSize, delayBetweenBatches, future);
+                } else {
+                    future.complete(world);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                future.completeExceptionally(e);
+            }
+        }, delayBetweenBatches);
     }
 }

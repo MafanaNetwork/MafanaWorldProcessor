@@ -1,0 +1,4 @@
+name: MafanaWorldProcessor
+version: '${project.version}'
+main: me.tahacheji.mafana.MafanaWorldProcessor
+api-version: 1.20

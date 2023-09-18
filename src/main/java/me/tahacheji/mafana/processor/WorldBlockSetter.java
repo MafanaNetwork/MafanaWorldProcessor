@@ -21,7 +21,6 @@ public class WorldBlockSetter {
         World voidWorld = worldCreator.createWorld();
         int currentIndex = 0;
         processBatch(voidWorld, worldBlocks, currentIndex, batchSize, delayBetweenBatches, future);
-
         return future;
     }
 
@@ -36,7 +35,6 @@ public class WorldBlockSetter {
                 try {
                     for (WorldBlock worldBlock : batch) {
                         Block block = voidWorld.getBlockAt(worldBlock.getX(), worldBlock.getY(), worldBlock.getZ());
-                        System.out.println(worldBlock.getMaterial().name());
                         block.setType(worldBlock.getMaterial());
                     }
                     if (endIndex < totalBlocks) {

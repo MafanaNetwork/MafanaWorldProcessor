@@ -44,6 +44,9 @@ public class WorldBlockGetter {
 
         Bukkit.getScheduler().runTaskLater(MafanaWorldProcessor.getInstance(), () -> {
             List<WorldBlock> cubeBlocks = getWorldBlocksInCube(cube);
+
+            // Only add blocks from the current cube if they haven't been added before
+            cubeBlocks.removeAll(allBlocks);
             allBlocks.addAll(cubeBlocks);
 
             processCubesRecursively(cubes, allBlocks, currentIndex + 1, delayBetweenCubesTicks, future);

@@ -14,11 +14,11 @@ import java.util.concurrent.Executors;
 
 public class WorldBlockSetter {
 
-    public CompletableFuture<World> setWorldBlocksAsyncWithDelay(List<WorldBlock> worldBlocks, int batchSize, long delayBetweenBatches) {
+    public CompletableFuture<World> setWorldBlocksAsyncWithDelay(String s, List<WorldBlock> worldBlocks, int batchSize, long delayBetweenBatches) {
         CompletableFuture<World> future = new CompletableFuture<>();
 
         // Create a new Void world
-        WorldCreator worldCreator = new WorldCreator("YourWorldName"); // Replace with your desired world name
+        WorldCreator worldCreator = new WorldCreator(s); // Replace with your desired world name
         worldCreator.generator(new VoidWorldGenerator());
         World voidWorld = worldCreator.createWorld();
         voidWorld.setAutoSave(false);
@@ -41,6 +41,7 @@ public class WorldBlockSetter {
                 try {
                     for (WorldBlock worldBlock : batch) {
                         Block block = voidWorld.getBlockAt(worldBlock.getX(), worldBlock.getY(), worldBlock.getZ());
+                        System.out.println(worldBlock.getMaterial().name());
                         block.setType(worldBlock.getMaterial());
                     }
                     if (endIndex < totalBlocks) {

@@ -46,7 +46,6 @@ public class WorldBlockGetter {
             List<WorldBlock> cubeBlocks = getWorldBlocksInCube(cube);
             allBlocks.addAll(cubeBlocks);
 
-            // Process the next cube with a delay
             processCubesRecursively(cubes, allBlocks, currentIndex + 1, delayBetweenCubesTicks, future);
         }, delayBetweenCubesTicks);
     }
@@ -58,6 +57,9 @@ public class WorldBlockGetter {
         // Iterate through locations within the cube and retrieve materials
         for (Location location : cube.getLocations()) {
             Material material = getMaterialAtLocation(location);
+            if(material == Material.AIR) {
+                continue;
+            }
             worldBlocks.add(new WorldBlock(material, location.getBlockX(), location.getBlockY(), location.getBlockZ()));
         }
 

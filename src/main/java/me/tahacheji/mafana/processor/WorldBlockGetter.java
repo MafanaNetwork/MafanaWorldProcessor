@@ -43,7 +43,7 @@ public class WorldBlockGetter {
         Cube cube = cubes.get(currentIndex);
 
         Bukkit.getScheduler().runTaskLater(MafanaWorldProcessor.getInstance(), () -> {
-            List<WorldBlock> cubeBlocks = getWorldBlocksInCube(cube);
+            List<WorldBlock> cubeBlocks = getWorldBlocksInCube(allBlocks, cube);
 
             allBlocks.addAll(cubeBlocks);
 
@@ -51,17 +51,24 @@ public class WorldBlockGetter {
         }, delayBetweenCubesTicks);
     }
 
-    private List<WorldBlock> getWorldBlocksInCube(Cube cube) {
+    private List<WorldBlock> getWorldBlocksInCube(List<WorldBlock> worldBlockList, Cube cube) {
         List<WorldBlock> worldBlocks = new ArrayList<>();
-        World world = x.getWorld();
 
-        // Iterate through locations within the cube and retrieve materials
         for (Location location : cube.getLocations()) {
             Material material = getMaterialAtLocation(location);
             if(material == Material.AIR) {
                 continue;
             }
-            worldBlocks.add(new WorldBlock(material, location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+            boolean m = false;
+            for(WorldBlock worldBlock : worldBlockList) {
+                if(worldBlock.getX() == location.getBlockX() && worldBlock.getY() == location.getBlockY() && worldBlock.getZ() == location.getBlockZ()) {
+                    m = true;
+                    break;
+                }
+            }
+            if(!m) {
+                worldBlocks.add(new WorldBlock(material, location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+            }
         }
 
         return worldBlocks;

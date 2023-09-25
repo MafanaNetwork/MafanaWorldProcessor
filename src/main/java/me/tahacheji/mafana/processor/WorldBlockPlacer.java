@@ -15,6 +15,7 @@ public class WorldBlockPlacer {
 
     private Location location1;
     private Location location2;
+    private List<WorldBlock> originalBlocks = new ArrayList<>();
 
     public WorldBlockPlacer(Location location1, Location location2) {
         this.location1 = location1;
@@ -27,6 +28,10 @@ public class WorldBlockPlacer {
         List<Cube> smallerCubes = divider.divide(divisions);
 
         List<WorldBlock> allBlocks = new ArrayList<>();
+        for (Cube cube : smallerCubes) {
+            List<WorldBlock> cubeOriginalBlocks = getWorldBlocksInCube(targetBlock, allBlocks, cube);
+            originalBlocks.addAll(cubeOriginalBlocks);
+        }
 
         placeBlocksRecursively(blockToPlace, targetBlock, smallerCubes, allBlocks, 0, percentage, delayBetweenCubesTicks, future);
 
@@ -39,6 +44,10 @@ public class WorldBlockPlacer {
         List<Cube> smallerCubes = divider.divide(divisions);
 
         List<WorldBlock> allBlocks = new ArrayList<>();
+        for (Cube cube : smallerCubes) {
+            List<WorldBlock> cubeOriginalBlocks = getWorldBlocksInCube(blockToRemove, allBlocks, cube);
+            originalBlocks.addAll(cubeOriginalBlocks);
+        }
 
         removeBlocksRecursively(blockToRemove, smallerCubes, allBlocks, 0, delayBetweenCubesTicks, future);
 
@@ -110,7 +119,7 @@ public class WorldBlockPlacer {
             int numBlocksToPlace = (int) (cubeBlocks.size() * percentage);
 
             // Randomly select locations to place blocks while keeping the percentage
-            placeRandomBlocksInCube(blockToPlace, cube, numBlocksToPlace);
+            placeRandomBlocksInCube(blockToPlace, targetBlock, cube, numBlocksToPlace);
 
             placeBlocksRecursively(blockToPlace, targetBlock, cubes, allBlocks, currentIndex + 1, percentage, delayBetweenCubesTicks, future);
         }, delayBetweenCubesTicks);
@@ -140,7 +149,7 @@ public class WorldBlockPlacer {
         return location.getBlock().getType();
     }
 
-    private void placeRandomBlocksInCube(Material blockToPlace, Cube cube, int numBlocksToPlace) {
+    private void placeRandomBlocksInCube(Material blockToPlace, Material targetBlock, Cube cube, int numBlocksToPlace) {
         if (numBlocksToPlace <= 0) {
             return;
         }
@@ -155,7 +164,7 @@ public class WorldBlockPlacer {
             // Check if the block above the targetLocation is air before placing
             Location locationToPlace = targetLocation.clone().add(0, 1, 0);
             Block blockAbove = locationToPlace.getBlock();
-            if (blockAbove.getType() == Material.AIR) {
+            if (blockAbove.getType() == Material.AIR && blockAbove.getLocation().clone().subtract(0,1,0).getBlock().getType() == targetBlock) {
                 // Place the blockToPlace one block above the targetLocation
                 locationToPlace.getBlock().setType(blockToPlace);
                 eligibleLocations.remove(randomIndex);
@@ -164,5 +173,17 @@ public class WorldBlockPlacer {
 
             numEligibleLocations--;
         }
+    }
+
+    public List<WorldBlock> getOriginalBlocks() {
+        return originalBlocks;
+    }
+
+    public Location getLocation1() {
+        return location1;
+    }
+
+    public Location getLocation2() {
+        return location2;
     }
 }

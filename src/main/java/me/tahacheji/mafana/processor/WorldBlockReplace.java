@@ -16,6 +16,7 @@ public class WorldBlockReplace {
 
     private Location location1;
     private Location location2;
+    private List<WorldBlock> originalBlocks = new ArrayList<>();
 
     public WorldBlockReplace(Location location1, Location location2) {
         this.location1 = location1;
@@ -29,6 +30,11 @@ public class WorldBlockReplace {
 
         List<WorldBlock> allBlocks = new ArrayList<>();
 
+        for (Cube cube : smallerCubes) {
+            List<WorldBlock> cubeOriginalBlocks = getWorldBlocksInCube(originalBlock, allBlocks, cube);
+            originalBlocks.addAll(cubeOriginalBlocks);
+        }
+
         processCubesRecursively(originalBlock, replacementBlock, smallerCubes, allBlocks, 0, delayBetweenCubesTicks, future);
 
         return future;
@@ -40,6 +46,10 @@ public class WorldBlockReplace {
         List<Cube> smallerCubes = divider.divide(divisions);
 
         List<WorldBlock> allBlocks = new ArrayList<>();
+        for (Cube cube : smallerCubes) {
+            List<WorldBlock> cubeOriginalBlocks = getWorldBlocksInCube(originalBlock, allBlocks, cube);
+            originalBlocks.addAll(cubeOriginalBlocks);
+        }
 
         processCubesRecursivelyWithPercentage(originalBlock, replacementBlock, smallerCubes, allBlocks, 0, percentage, delayBetweenCubesTicks, future);
 
@@ -145,5 +155,17 @@ public class WorldBlockReplace {
         }
 
         return replacedBlocks;
+    }
+
+    public List<WorldBlock> getOriginalBlocks() {
+        return originalBlocks;
+    }
+
+    public Location getLocation1() {
+        return location1;
+    }
+
+    public Location getLocation2() {
+        return location2;
     }
 }

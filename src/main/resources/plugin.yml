@@ -1,3 +1,4 @@
+depend: [ ProtocolLib ]
 name: MafanaWorldProcessor
 version: '${project.version}'
 main: me.tahacheji.mafana.MafanaWorldProcessor

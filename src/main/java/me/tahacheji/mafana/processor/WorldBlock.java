@@ -1,6 +1,7 @@
 package me.tahacheji.mafana.processor;
 
 import org.bukkit.Material;
+import org.bukkit.material.MaterialData;
 
 public class WorldBlock {
     private Material material;

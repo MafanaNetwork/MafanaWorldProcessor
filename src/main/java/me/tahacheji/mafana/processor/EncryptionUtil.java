@@ -55,34 +55,6 @@ public class EncryptionUtil {
         return new SecretKeySpec(keyBytes, ALGORITHM);
     }
 
-    public String encryptList(List<String> list) {
-        try {
-            Cipher cipher = Cipher.getInstance(CIPHER_INSTANCE);
-            cipher.init(Cipher.ENCRYPT_MODE, SECRET_KEY);
-
-            String serializedList = String.join(",", list);
-            byte[] encryptedBytes = cipher.doFinal(serializedList.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(encryptedBytes);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public List<String> decryptToList(String encryptedString) {
-        try {
-            Cipher cipher = Cipher.getInstance(CIPHER_INSTANCE);
-            cipher.init(Cipher.DECRYPT_MODE, SECRET_KEY);
-
-            byte[] encryptedBytes = Base64.getDecoder().decode(encryptedString);
-            byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
-            String decryptedString = new String(decryptedBytes, StandardCharsets.UTF_8);
-
-            return Arrays.asList(decryptedString.split(","));
-        } catch (Exception e) {
-            return new ArrayList<>(); // Return an empty list if decryption fails
-        }
-    }
-
     public String encodeItem(ItemStack item) {
         return itemToBase64(item);
     }

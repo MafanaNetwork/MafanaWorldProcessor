@@ -22,7 +22,7 @@ public class WorldBlockData extends MySQL {
     public void addBlocks(String id, Location x, Location y) {
         if(!sqlGetter.exists(new EncryptionUtil().stringToUUID(id))) {
             WorldBlockGetter worldProcessor = new WorldBlockGetter(null, x, y);
-            CompletableFuture<List<WorldBlock>> future = worldProcessor.processCubeAsync(2, 20L);
+            CompletableFuture<List<WorldBlock>> future = worldProcessor.processCubeAsync(2, 10L, true);
             future.thenAccept(worldBlocks -> {
                 UUID uuid = new EncryptionUtil().stringToUUID(id);
                 sqlGetter.setString(new MysqlValue("NAME", uuid, id));
@@ -44,7 +44,7 @@ public class WorldBlockData extends MySQL {
         UUID uuid = new EncryptionUtil().stringToUUID(id);
         if(sqlGetter.exists(uuid)) {
             WorldBlockGetter worldProcessor = new WorldBlockGetter(null, x, y);
-            CompletableFuture<List<WorldBlock>> future = worldProcessor.processCubeAsync(2, 20L);
+            CompletableFuture<List<WorldBlock>> future = worldProcessor.processCubeAsync(2, 10L, true);
             future.thenAccept(worldBlocks -> {
                 sqlGetter.setString(new MysqlValue("BLOCKS", uuid, new WorldBlockUtil().compressWorldBlocksToJson(worldBlocks)));
             });

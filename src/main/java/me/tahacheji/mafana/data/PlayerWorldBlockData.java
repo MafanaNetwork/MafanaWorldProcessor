@@ -16,7 +16,7 @@ import java.util.UUID;
 public class PlayerWorldBlockData extends MySQL {
     SQLGetter sqlGetter = new SQLGetter(this);
     public PlayerWorldBlockData() {
-        super("localhost", "3306", "51190", "51190", "26c58bbe8e");
+        super("162.254.145.231", "3306", "51252", "51252", "346a1ef0fc");
     }
 
     public void addPlayerWorldBlocks(Player target, String id) {

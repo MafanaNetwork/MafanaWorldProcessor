@@ -1,4 +1,4 @@
-package me.tahacheji.mafana.processor;
+package me.tahacheji.mafana.util;
 
 import org.bukkit.Location;
 import org.bukkit.Material;

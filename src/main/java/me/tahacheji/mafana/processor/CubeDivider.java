@@ -1,6 +1,7 @@
 package me.tahacheji.mafana.processor;
 
 import org.bukkit.Location;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,4 +43,7 @@ public class CubeDivider {
 
         return smallerCubes;
     }
+
 }
+
+

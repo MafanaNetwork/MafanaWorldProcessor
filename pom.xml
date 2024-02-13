@@ -23,8 +23,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <source>16</source>
+                    <target>16</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -70,6 +70,10 @@
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
         </repository>
+        <repository>
+            <id>enginehub-maven</id>
+            <url>https://maven.enginehub.org/repo/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -94,6 +98,18 @@
             <groupId>com.github.MaskedWasTaken</groupId>
             <artifactId>MafanaMysqlAPI-Remake</artifactId>
             <version>1.9</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.MaskedWasTaken</groupId>
+            <artifactId>MafanaCommandNetwork</artifactId>
+            <version>1.2</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.MaskedWasTaken</groupId>
+            <artifactId>MafanaNetwork</artifactId>
+            <version>1.4</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

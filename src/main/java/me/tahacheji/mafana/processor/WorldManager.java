@@ -48,8 +48,6 @@ public class WorldManager {
         return newWorld;
     }
 
-
-
     public void copyFolder(File source, File target) throws IOException {
         try {
             ArrayList<String> ignore = new ArrayList<>(Arrays.asList("uid.dat", "session.lock"));

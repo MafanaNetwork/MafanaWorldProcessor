@@ -1,189 +1,362 @@
 package me.tahacheji.mafana.processor;
 
 import me.tahacheji.mafana.MafanaWorldProcessor;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
+import me.tahacheji.mafana.util.MathUtil;
+import org.bukkit.*;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 public class WorldBlockPlacer {
 
-    private Location location1;
-    private Location location2;
-    private List<WorldBlock> originalBlocks = new ArrayList<>();
+    private Location x;
+    private Location y;
+    private World world;
+    private List<TargetBlock> targetBlock;
+    private List<Material> canPlaceIn;
+    private List<WorldBlock> upperBuild;
+    private String upperID;
+    private List<WorldBlock> underBuild;
+    private String underID;
+    private int batchSize;
+    private int divisions;
+    private double percentage;
+    private long delayBetweenCubesTicks;
+    private int amountOfAir;
+    boolean transparent;
+    boolean packet;
 
-    public WorldBlockPlacer(Location location1, Location location2) {
-        this.location1 = location1;
-        this.location2 = location2;
+    public List<WorldBlockSetter> worldBlockSetters = new ArrayList<>();
+
+    public WorldBlockPlacer(Location x, Location y, World world, List<TargetBlock> targetBlock, List<Material> canPlaceIn, List<WorldBlock> upperBuild, String upperID, List<WorldBlock> underBuild, String underID, int batchSize, int divisions, double percentage, long delayBetweenCubesTicks, int amountOfAir, boolean transparent, boolean packet) {
+        this.x = x;
+        this.y = y;
+        this.world = world;
+        this.targetBlock = targetBlock;
+        this.canPlaceIn = canPlaceIn;
+        this.upperBuild = upperBuild;
+        this.upperID = upperID;
+        this.underBuild = underBuild;
+        this.underID = underID;
+        this.batchSize = batchSize;
+        this.divisions = divisions;
+        this.percentage = percentage;
+        this.delayBetweenCubesTicks = delayBetweenCubesTicks;
+        this.amountOfAir = amountOfAir;
+        this.transparent = transparent;
+        this.packet = packet;
     }
 
-    public CompletableFuture<List<WorldBlock>> placeBlocksAsync(Material blockToPlace, Material targetBlock, int divisions, double percentage, long delayBetweenCubesTicks) {
-        CompletableFuture<List<WorldBlock>> future = new CompletableFuture<>();
-        CubeDivider divider = new CubeDivider(location1, location2);
-        List<Cube> smallerCubes = divider.divide(divisions);
+    public CompletableFuture<List<PlacerBuild>> placeBlocks() {
+        CompletableFuture<List<PlacerBuild>> future = new CompletableFuture<>();
+        List<Cube> cubes = new CubeDivider(x, y).divide(divisions);
+        List<PlacerBuild> buildsList = new ArrayList<>();
 
-        List<WorldBlock> allBlocks = new ArrayList<>();
-        for (Cube cube : smallerCubes) {
-            List<WorldBlock> cubeOriginalBlocks = getWorldBlocksInCube(targetBlock, allBlocks, cube);
-            originalBlocks.addAll(cubeOriginalBlocks);
-        }
-
-        placeBlocksRecursively(blockToPlace, targetBlock, smallerCubes, allBlocks, 0, percentage, delayBetweenCubesTicks, future);
-
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                try {
+                    for (Cube cube : cubes) {
+                        if (hasEnoughCanPlaceIn(cube) && hasTargetBlock(cube)) {
+                            Bukkit.getScheduler().runTask(MafanaWorldProcessor.getInstance(), () -> {
+                                CompletableFuture<List<PlacerBuild>> buildsMapFuture = placeBuildsInCube(cube);
+                                buildsMapFuture.thenAccept(buildsList::addAll);
+                            });
+                        }
+                    }
+                    future.complete(buildsList);
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
+                }
+            }
+        }.runTaskAsynchronously(MafanaWorldProcessor.getInstance());
         return future;
     }
 
-    public CompletableFuture<List<WorldBlock>> removeBlocksAsync(Material blockToRemove, int divisions, long delayBetweenCubesTicks) {
-        CompletableFuture<List<WorldBlock>> future = new CompletableFuture<>();
-        CubeDivider divider = new CubeDivider(location1, location2);
-        List<Cube> smallerCubes = divider.divide(divisions);
+    public CompletableFuture<List<PlacerBuild>> placeBuildsInCube(Cube cube) {
+        CompletableFuture<List<PlacerBuild>> future = new CompletableFuture<>();
+        List<Location> cubeLocations = new ArrayList<>(cube.getLocations());
+        Random random = new Random();
+        List<PlacerBuild> buildsMap = new ArrayList<>();
 
-        List<WorldBlock> allBlocks = new ArrayList<>();
-        for (Cube cube : smallerCubes) {
-            List<WorldBlock> cubeOriginalBlocks = getWorldBlocksInCube(blockToRemove, allBlocks, cube);
-            originalBlocks.addAll(cubeOriginalBlocks);
-        }
-
-        removeBlocksRecursively(blockToRemove, smallerCubes, allBlocks, 0, delayBetweenCubesTicks, future);
-
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                try {
+                    while (!cubeLocations.isEmpty()) {
+                        int randomIndex = random.nextInt(cubeLocations.size());
+                        Location targetLocation = cubeLocations.get(randomIndex);
+                        if(MafanaWorldProcessor.getInstance().getIgnoreLocations().contains(targetLocation)) {
+                            continue;
+                        }
+                        for (TargetBlock t : targetBlock) {
+                            if (targetLocation.add(t.getX(), t.getY(), t.getZ()).getBlock().getType() == t.getMaterial()) {
+                                Location l = targetLocation.clone().add(t.getX(), t.getY(), t.getZ());
+                                if (canPlaceInLocation(t, l)) {
+                                    double randomValue = random.nextDouble() * 100;
+                                    if (randomValue <= percentage) {
+                                        WorldBlockSetter worldBlockSetter = new WorldBlockSetter(upperBuild, underBuild, upperID, underID, l, batchSize, delayBetweenCubesTicks);
+                                        worldBlockSetter.setRotateX(0);
+                                        worldBlockSetter.setRotateY(getRotation(t));
+                                        worldBlockSetter.setRotateZ(0);
+                                        worldBlockSetter.setWorld(world.getName());
+                                        worldBlockSetter.setTransparent(transparent);
+                                        worldBlockSetter.setPacket(packet);
+                                        CompletableFuture<HashMap<Build, Build>> wbs = worldBlockSetter.placeBlockAtLocation();
+                                        wbs.thenAcceptAsync(x -> {
+                                            Build upper = new Build(upperID, false);
+                                            for (Build z : x.keySet()) {
+                                                upper.setBlockList(z.getBlockList());
+                                            }
+                                            Build under = new Build(underID, false);
+                                            for (Build z : x.values()) {
+                                                under.setBlockList(z.getBlockList());
+                                            }
+                                            PlacerBuild placerBuild = new PlacerBuild(upper, under);
+                                            buildsMap.add(placerBuild);
+                                            worldBlockSetters.add(worldBlockSetter);
+                                            future.complete(buildsMap);
+                                        });
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        cubeLocations.remove(randomIndex);
+                    }
+                } catch (Exception e) {
+                    future.completeExceptionally(e);
+                }
+            }
+        }.runTask(MafanaWorldProcessor.getInstance());
         return future;
     }
 
-    private void removeBlocksRecursively(Material blockToRemove, List<Cube> cubes, List<WorldBlock> allBlocks, int currentIndex, long delayBetweenCubesTicks, CompletableFuture<List<WorldBlock>> future) {
-        if (currentIndex >= cubes.size()) {
-            future.complete(allBlocks);
-            return;
-        }
+    public boolean canPlaceInLocation(TargetBlock t, Location location) {
+        if (!getUpperBuild().isEmpty()) {
+            int avgX = (int) getUpperBuild().stream().mapToInt(WorldBlock::getX).average().orElse(0);
+            int minY = getUpperBuild().stream().mapToInt(WorldBlock::getY).min().orElse(0);
+            int avgZ = (int) getUpperBuild().stream().mapToInt(WorldBlock::getZ).average().orElse(0);
 
-        Cube cube = cubes.get(currentIndex);
+            for (WorldBlock worldBlock : getUpperBuild()) {
+                int offsetX = worldBlock.getX() - avgX;
+                int offsetY = worldBlock.getY() - minY;
+                int offsetZ = worldBlock.getZ() - avgZ;
 
-        Bukkit.getScheduler().runTaskLater(MafanaWorldProcessor.getInstance(), () -> {
-            List<WorldBlock> cubeBlocks = getWorldBlocksOfTypeInCube(blockToRemove, allBlocks, cube);
+                int[] rotatedCords = new MathUtil().applyRotations(0, getRotation(t), 0, offsetX, offsetY, offsetZ);
 
-            allBlocks.addAll(cubeBlocks);
+                int targetX = location.getBlockX() + rotatedCords[0];
+                int targetY = location.getBlockY() + rotatedCords[1];
+                int targetZ = location.getBlockZ() + rotatedCords[2];
 
-            // Remove blocks in the cube
-            removeBlocksInCube(cube, blockToRemove);
-
-            removeBlocksRecursively(blockToRemove, cubes, allBlocks, currentIndex + 1, delayBetweenCubesTicks, future);
-        }, delayBetweenCubesTicks);
-    }
-
-    private List<WorldBlock> getWorldBlocksOfTypeInCube(Material blockType, List<WorldBlock> worldBlockList, Cube cube) {
-        List<WorldBlock> worldBlocks = new ArrayList<>();
-
-        for (Location location : cube.getLocations()) {
-            Material material = getMaterialAtLocation(location);
-            if (material == blockType) {
-                boolean exists = worldBlockList.stream()
-                        .anyMatch(worldBlock -> worldBlock.getX() == location.getBlockX()
-                                && worldBlock.getY() == location.getBlockY()
-                                && worldBlock.getZ() == location.getBlockZ());
-
-                if (!exists) {
-                    worldBlocks.add(new WorldBlock(material, location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+                Location newLocation = new Location(world, targetX, targetY, targetZ);
+                if (!canPlaceIn.contains(newLocation.getBlock().getType())) {
+                    return false;
                 }
             }
         }
-
-        return worldBlocks;
+        return true;
     }
 
-    private void removeBlocksInCube(Cube cube, Material blockToRemove) {
+    public CompletableFuture<List<WorldBlock>> undoPlacing() {
+        CompletableFuture<List<WorldBlock>> future = new CompletableFuture<>();
+        List<WorldBlock> u = new ArrayList<>();
+        for (WorldBlockSetter worldBlockSetter : worldBlockSetters) {
+            CompletableFuture<List<WorldBlock>> undoFuture = worldBlockSetter.undoBuild(batchSize, (int) delayBetweenCubesTicks);
+            undoFuture.thenAcceptAsync(u::addAll);
+        }
+        future.complete(u);
+        return future;
+    }
+
+    public boolean hasEnoughCanPlaceIn(Cube cube) {
+        int z = upperBuild.size() + underBuild.size();
         for (Location location : cube.getLocations()) {
-            if (location.getBlock().getType() == blockToRemove) {
-                location.getBlock().setType(Material.AIR);
+            Material x = location.getBlock().getType();
+            if (canPlaceIn.contains(x)) {
+                z--;
             }
         }
+        return z <= 0;
     }
 
-    private void placeBlocksRecursively(Material blockToPlace, Material targetBlock, List<Cube> cubes, List<WorldBlock> allBlocks, int currentIndex, double percentage, long delayBetweenCubesTicks, CompletableFuture<List<WorldBlock>> future) {
-        if (currentIndex >= cubes.size()) {
-            future.complete(allBlocks);
-            return;
-        }
-
-        Cube cube = cubes.get(currentIndex);
-
-        Bukkit.getScheduler().runTaskLater(MafanaWorldProcessor.getInstance(), () -> {
-            List<WorldBlock> cubeBlocks = getWorldBlocksInCube(targetBlock, allBlocks, cube);
-
-            allBlocks.addAll(cubeBlocks);
-
-            // Calculate the number of blocks to place based on the percentage
-            int numBlocksToPlace = (int) (cubeBlocks.size() * percentage);
-
-            // Randomly select locations to place blocks while keeping the percentage
-            placeRandomBlocksInCube(blockToPlace, targetBlock, cube, numBlocksToPlace);
-
-            placeBlocksRecursively(blockToPlace, targetBlock, cubes, allBlocks, currentIndex + 1, percentage, delayBetweenCubesTicks, future);
-        }, delayBetweenCubesTicks);
-    }
-
-    private List<WorldBlock> getWorldBlocksInCube(Material targetBlock, List<WorldBlock> worldBlockList, Cube cube) {
-        List<WorldBlock> worldBlocks = new ArrayList<>();
-
+    public boolean hasTargetBlock(Cube cube) {
         for (Location location : cube.getLocations()) {
-            Material material = getMaterialAtLocation(location);
-            if (material == targetBlock) {
-                boolean exists = worldBlockList.stream()
-                        .anyMatch(worldBlock -> worldBlock.getX() == location.getBlockX()
-                                && worldBlock.getY() == location.getBlockY()
-                                && worldBlock.getZ() == location.getBlockZ());
-
-                if (!exists) {
-                    worldBlocks.add(new WorldBlock(material, location.getBlockX(), location.getBlockY(), location.getBlockZ()));
+            Material x = location.getBlock().getType();
+            for (TargetBlock t : targetBlock) {
+                if (t.getMaterial() == x) {
+                    return true;
                 }
             }
         }
-
-        return worldBlocks;
+        return false;
     }
 
-    private Material getMaterialAtLocation(Location location) {
-        return location.getBlock().getType();
+    public int getRotation(TargetBlock targetBlock) {
+        if(targetBlock.getX() > 0) {
+            return 180;
+        } else if(targetBlock.getX() < 0) {
+            return 0;
+        }
+        if(targetBlock.getZ() > 0) {
+            return 90;
+        } else if(targetBlock.getZ() < 0) {
+            return 270;
+        }
+        return 0;
     }
 
-    private void placeRandomBlocksInCube(Material blockToPlace, Material targetBlock, Cube cube, int numBlocksToPlace) {
-        if (numBlocksToPlace <= 0) {
-            return;
+    public Location getX() {
+        return x;
+    }
+
+    public Location getY() {
+        return y;
+    }
+
+    public World getWorld() {
+        return world;
+    }
+
+    public List<TargetBlock> getTargetBlock() {
+        return targetBlock;
+    }
+
+    public List<Material> getCanPlaceIn() {
+        return canPlaceIn;
+    }
+
+    public List<WorldBlock> getUpperBuild() {
+        return upperBuild;
+    }
+
+    public String getUpperID() {
+        return upperID;
+    }
+
+    public List<WorldBlock> getUnderBuild() {
+        return underBuild;
+    }
+
+    public String getUnderID() {
+        return underID;
+    }
+
+    public int getDivisions() {
+        return divisions;
+    }
+
+    public double getPercentage() {
+        return percentage;
+    }
+
+    public long getDelayBetweenCubesTicks() {
+        return delayBetweenCubesTicks;
+    }
+
+    public int getAmountOfAir() {
+        return amountOfAir;
+    }
+
+    public List<WorldBlockSetter> getWorldBlockSetters() {
+        return worldBlockSetters;
+    }
+
+    public void setX(Location x) {
+        this.x = x;
+    }
+
+    public void setY(Location y) {
+        this.y = y;
+    }
+
+    public void setWorld(World world) {
+        this.world = world;
+    }
+
+    public void setTargetBlock(List<TargetBlock> targetBlock) {
+        this.targetBlock = targetBlock;
+    }
+
+    public void setCanPlaceIn(List<Material> canPlaceIn) {
+        this.canPlaceIn = canPlaceIn;
+    }
+
+    public void setUpperBuild(List<WorldBlock> upperBuild) {
+        this.upperBuild = upperBuild;
+    }
+
+    public void setUpperID(String upperID) {
+        this.upperID = upperID;
+    }
+
+    public void setUnderBuild(List<WorldBlock> underBuild) {
+        this.underBuild = underBuild;
+    }
+
+    public void setUnderID(String underID) {
+        this.underID = underID;
+    }
+
+    public void setBatchSize(int batchSize) {
+        this.batchSize = batchSize;
+    }
+
+    public void setDivisions(int divisions) {
+        this.divisions = divisions;
+    }
+
+    public void setPercentage(double percentage) {
+        this.percentage = percentage;
+    }
+
+    public void setDelayBetweenCubesTicks(long delayBetweenCubesTicks) {
+        this.delayBetweenCubesTicks = delayBetweenCubesTicks;
+    }
+
+    public void setAmountOfAir(int amountOfAir) {
+        this.amountOfAir = amountOfAir;
+    }
+
+    public void setTransparent(boolean transparent) {
+        this.transparent = transparent;
+    }
+
+    public void setPacket(boolean packet) {
+        this.packet = packet;
+    }
+
+    public void setWorldBlockSetters(List<WorldBlockSetter> worldBlockSetters) {
+        this.worldBlockSetters = worldBlockSetters;
+    }
+
+    public class PlacerBuild {
+        public Build upper;
+        public Build under;
+
+        public PlacerBuild(Build upper, Build under) {
+            this.upper = upper;
+            this.under = under;
         }
 
-        List<Location> eligibleLocations = new ArrayList<>(cube.getLocations());
-        int numEligibleLocations = eligibleLocations.size();
-
-        while (numBlocksToPlace > 0 && numEligibleLocations > 0) {
-            int randomIndex = (int) (Math.random() * numEligibleLocations);
-            Location targetLocation = eligibleLocations.get(randomIndex);
-
-            // Check if the block above the targetLocation is air before placing
-            Location locationToPlace = targetLocation.clone().add(0, 1, 0);
-            Block blockAbove = locationToPlace.getBlock();
-            if (blockAbove.getType() == Material.AIR && blockAbove.getLocation().clone().subtract(0,1,0).getBlock().getType() == targetBlock) {
-                // Place the blockToPlace one block above the targetLocation
-                locationToPlace.getBlock().setType(blockToPlace);
-                eligibleLocations.remove(randomIndex);
-                numBlocksToPlace--;
-            }
-
-            numEligibleLocations--;
+        public Build getUnder() {
+            return under;
         }
-    }
 
-    public List<WorldBlock> getOriginalBlocks() {
-        return originalBlocks;
-    }
+        public Build getUpper() {
+            return upper;
+        }
 
-    public Location getLocation1() {
-        return location1;
-    }
+        public void setUnder(Build under) {
+            this.under = under;
+        }
 
-    public Location getLocation2() {
-        return location2;
+        public void setUpper(Build upper) {
+            this.upper = upper;
+        }
     }
 }

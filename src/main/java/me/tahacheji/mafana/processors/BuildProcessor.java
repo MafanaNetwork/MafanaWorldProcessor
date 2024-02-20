@@ -15,11 +15,11 @@ public class BuildProcessor extends Processor<Build> {
 
     @Override
     public Build process(CommandSender commandSender, String s) {
-        return new Build(MafanaWorldProcessor.getInstance().getWorldBlockData().getBuildFromName(s), false);
+        return new Build(MafanaWorldProcessor.getInstance().getWorldBlockData().getBuildFromNameSync(s), false);
     }
 
     public List<String> tabComplete(CommandSender sender, String supplied) {
-        return MafanaWorldProcessor.getInstance().getWorldBlockData().getAllNames()
+        return MafanaWorldProcessor.getInstance().getWorldBlockData().getAllNamesSync()
                 .stream()
                 .filter(Objects::nonNull)
                 .filter(name -> name.toLowerCase().startsWith(supplied.toLowerCase()))

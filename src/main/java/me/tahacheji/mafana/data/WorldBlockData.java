@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutionException;
 
 public class WorldBlockData extends MySQL {
     SQLGetter sqlGetter = new SQLGetter(this);
+
     public WorldBlockData() {
         super("162.254.145.231", "3306", "51252", "51252", "346a1ef0fc");
     }
@@ -23,7 +24,7 @@ public class WorldBlockData extends MySQL {
         return CompletableFuture.supplyAsync(() -> {
             UUID uuid = new EncryptionUtil().stringToUUID(id);
             try {
-                if(sqlGetter.existsAsync(uuid).get()) {
+                if (sqlGetter.existsAsync(uuid).get()) {
                     return new WorldBlockUtil().decompressJsonToWorldBlocks(sqlGetter.getString(uuid, new DatabaseValue("BLOCKS")));
                 }
             } catch (InterruptedException | ExecutionException e) {
@@ -43,13 +44,13 @@ public class WorldBlockData extends MySQL {
                 try {
                     if (sqlGetter.existsAsync(uuid).get()) {
                         List<WorldBlock> worldBlocks = new ArrayList<>();
-                        for(List<WorldBlock> l : cubeBlocksList) {
+                        for (List<WorldBlock> l : cubeBlocksList) {
                             worldBlocks.addAll(l);
                         }
                         sqlGetter.setStringAsync(new DatabaseValue("BLOCKS", uuid, new WorldBlockUtil().compressWorldBlocksToJson(worldBlocks)));
                     } else {
                         List<WorldBlock> worldBlocks = new ArrayList<>();
-                        for(List<WorldBlock> l : cubeBlocksList) {
+                        for (List<WorldBlock> l : cubeBlocksList) {
                             worldBlocks.addAll(l);
                         }
                         sqlGetter.setStringAsync(new DatabaseValue("NAME", uuid, id));
@@ -72,11 +73,20 @@ public class WorldBlockData extends MySQL {
         return new CompletableFuture<>();
     }
 
+    public List<String> getAllNamesSync() {
+        try {
+            return sqlGetter.getAllString(new DatabaseValue("NAME"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
+    }
+
     public CompletableFuture<String> getBuildFromName(String s) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                for(String x : getAllNames().get()) {
-                    if(x.equalsIgnoreCase(s)) {
+                for (String x : getAllNames().get()) {
+                    if (x.equalsIgnoreCase(s)) {
                         return x;
                     }
                 }
@@ -85,6 +95,16 @@ public class WorldBlockData extends MySQL {
             }
             return "";
         });
+    }
+
+    public String getBuildFromNameSync(String s) {
+        for (String x : getAllNamesSync()) {
+            if (x.equalsIgnoreCase(s)) {
+                return x;
+            }
+        }
+        return "";
+
     }
 
     public CompletableFuture<Void> removeBuild(String id) {

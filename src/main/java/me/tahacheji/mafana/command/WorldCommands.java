@@ -32,7 +32,7 @@ public class WorldCommands {
             if(playerEditor.getPoint1() != null && playerEditor.getPoint2() != null) {
                 Location p1 = playerEditor.getPoint1();
                 Location p2 = playerEditor.getPoint2();
-                MafanaWorldProcessor.getInstance().getIgnoreLocationDatabase().setIgnoredLocation(id, new Cube(p1, p2).getLocations());
+                MafanaWorldProcessor.getInstance().getIgnoreLocationDatabase().setIgnoredLocation(id, p1, p2);
             }
         }
     }
@@ -50,28 +50,36 @@ public class WorldCommands {
     @Command(names = {"mwp build", "mafanaworldprocessor build"}, permission = "mafana.admin", playerOnly = true)
     public void build(Player player, @Param(name = "upperBuildID") Build upper, @Param(name = "underBuildID") Build under, @Param(name = "location") Location location, @Param(name = "rotateX") double rotateX, @Param(name = "rotateY") double rotateY, @Param(name = "rotateZ") double rotateZ, @Param(name = "ticks") int x, @Param(name = "batch") int batch, @Param(name = "transparent") boolean transparent, @Param(name = "packet") boolean packet) {
         try {
-            List<WorldBlock> upperBuild = new ArrayList<>(MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(upper.getID()));
-            List<WorldBlock> underBuild = new ArrayList<>(MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(under.getID()));
-            Location l = new Location(Bukkit.getWorld("world"), location.getX(), location.getY(), location.getZ());
-            WorldBlockSetter worldBlockSetter = new WorldBlockSetter(upperBuild, underBuild, upper.getID(), under.getID(), l, x, batch);
-            worldBlockSetter.setRotateX(rotateX);
-            worldBlockSetter.setRotateY(rotateY);
-            worldBlockSetter.setRotateZ(rotateZ);
-            worldBlockSetter.setPacket(packet);
-            worldBlockSetter.setTransparent(transparent);
-            worldBlockSetter.setWorld("world");
-            CompletableFuture<HashMap<Build, Build>> future = worldBlockSetter.placeBlockAtLocation();
-            future.thenAcceptAsync(buildHashMap -> {
-                player.sendMessage("Build completed successfully!");
-            }).exceptionally(ex -> {
-                player.sendMessage("An error occurred while building: " + ex.getMessage());
-                ex.printStackTrace();
+            CompletableFuture.supplyAsync(() -> {
+                try {
+                    List<WorldBlock> upperBuild = new ArrayList<>(MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(upper.getID()).get());
+                    List<WorldBlock> underBuild = new ArrayList<>(MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(under.getID()).get());
+                    Location l = new Location(Bukkit.getWorld("world"), location.getX(), location.getY(), location.getZ());
+                    WorldBlockSetter worldBlockSetter = new WorldBlockSetter(upperBuild, underBuild, upper.getID(), under.getID(), l, x, batch);
+                    worldBlockSetter.setRotateX(rotateX);
+                    worldBlockSetter.setRotateY(rotateY);
+                    worldBlockSetter.setRotateZ(rotateZ);
+                    worldBlockSetter.setPacket(packet);
+                    worldBlockSetter.setTransparent(transparent);
+                    worldBlockSetter.setWorld("world");
+                    CompletableFuture<HashMap<Build, Build>> future = worldBlockSetter.placeBlockAtLocation();
+                    future.thenAcceptAsync(buildHashMap -> {
+                        player.sendMessage("Build completed successfully!");
+                    }).exceptionally(ex -> {
+                        player.sendMessage("An error occurred while building: " + ex.getMessage());
+                        ex.printStackTrace();
+                        return null;
+                    });
+                    PlayerEditor playerEditor = MafanaWorldProcessor.getInstance().getPlayerEditor(player);
+                    if (playerEditor != null) {
+                        playerEditor.addWorldBlockSetter(worldBlockSetter);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    player.sendMessage("An unexpected error occurred: " + e.getMessage());
+                }
                 return null;
             });
-            PlayerEditor playerEditor = MafanaWorldProcessor.getInstance().getPlayerEditor(player);
-            if (playerEditor != null) {
-                playerEditor.addWorldBlockSetter(worldBlockSetter);
-            }
         } catch (Exception e) {
             e.printStackTrace();
             player.sendMessage("An unexpected error occurred: " + e.getMessage());
@@ -191,27 +199,34 @@ public class WorldCommands {
 
     @Command(names = {"mwp placeBuild", "mafanaworldprocessor place"}, permission = "mafana.admin")
     public void placeBuilds(Player player, @Param(name = "location1") Location location1, @Param(name = "location2") Location location2, @Param(name = "canPlaceIn") me.tahacheji.mafana.commandExecutor.bukkit.Material canPlaceIn, @Param(name = "targetMaterial") me.tahacheji.mafana.commandExecutor.bukkit.Material targetMaterial, @Param(name = "targetX") Location targetLocation, @Param(name = "upperBuildID") Build upperBlocks, @Param(name = "underBuildID") Build underBlocks, @Param(name = "batchSize") int batchSize, @Param(name = "percentage") double percentage, @Param(name = "divisions") int divisions, @Param(name = "delayBetweenCubesTicks") int delayBetweenCubesTicks, @Param(name = "amountOfAir") int amountOfAir, @Param(name = "transparent") boolean transparent, @Param(name = "packet") boolean packet) {
-        World world = player.getWorld();
-        List<TargetBlock> targetBlocks = new ArrayList<>();
-        for (Material m : targetMaterial.getMaterials()) {
-            targetBlocks.add(new TargetBlock(m, (int) targetLocation.getX(), (int) targetLocation.getY(), (int) targetLocation.getZ()));
-        }
-        List<WorldBlock> upperBuild = new ArrayList<>(MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(upperBlocks.getID()));
-        List<WorldBlock> underBuild = new ArrayList<>(MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(underBlocks.getID()));
-        location1.setWorld(player.getWorld());
-        location2.setWorld(player.getWorld());
-        WorldBlockPlacer worldBlockPlacer = new WorldBlockPlacer(location1, location2, world, targetBlocks, canPlaceIn.getMaterials(), upperBuild, upperBlocks.getID(), underBuild, underBlocks.getID(), batchSize, divisions, percentage, delayBetweenCubesTicks, amountOfAir, transparent, packet);
-        CompletableFuture<List<WorldBlockPlacer.PlacerBuild>> future = worldBlockPlacer.placeBlocks();
-        future.thenAccept(placerBuilds -> {
-            player.sendMessage(ChatColor.GREEN + "Complete");
-        }).exceptionally(e -> {
-            player.sendMessage("Error: " + e.getMessage());
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                World world = player.getWorld();
+                List<TargetBlock> targetBlocks = new ArrayList<>();
+                for (Material m : targetMaterial.getMaterials()) {
+                    targetBlocks.add(new TargetBlock(m, (int) targetLocation.getX(), (int) targetLocation.getY(), (int) targetLocation.getZ()));
+                }
+                List<WorldBlock> upperBuild = new ArrayList<>(MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(upperBlocks.getID()).get());
+                List<WorldBlock> underBuild = new ArrayList<>(MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(underBlocks.getID()).get());
+                location1.setWorld(player.getWorld());
+                location2.setWorld(player.getWorld());
+                WorldBlockPlacer worldBlockPlacer = new WorldBlockPlacer(location1, location2, world, targetBlocks, canPlaceIn.getMaterials(), upperBuild, upperBlocks.getID(), underBuild, underBlocks.getID(), batchSize, divisions, percentage, delayBetweenCubesTicks, amountOfAir, transparent, packet);
+                CompletableFuture<List<WorldBlockPlacer.PlacerBuild>> future = worldBlockPlacer.placeBlocks();
+                future.thenAccept(placerBuilds -> {
+                    player.sendMessage(ChatColor.GREEN + "Complete");
+                }).exceptionally(e -> {
+                    player.sendMessage("Error: " + e.getMessage());
+                    return null;
+                });
+                PlayerEditor playerEditor = MafanaWorldProcessor.getInstance().getPlayerEditor(player);
+                if (playerEditor != null) {
+                    playerEditor.addWorldBlockPlacers(worldBlockPlacer);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             return null;
         });
-        PlayerEditor playerEditor = MafanaWorldProcessor.getInstance().getPlayerEditor(player);
-        if (playerEditor != null) {
-            playerEditor.addWorldBlockPlacers(worldBlockPlacer);
-        }
     }
 
 

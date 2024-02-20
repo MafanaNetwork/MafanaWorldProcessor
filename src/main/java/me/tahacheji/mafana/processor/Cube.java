@@ -3,6 +3,7 @@ package me.tahacheji.mafana.processor;
 import org.bukkit.Location;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class Cube {
     private final Location corner1;
@@ -15,6 +16,10 @@ public class Cube {
 
     public List<Location> getLocations() {
         return new LocationProcessor(corner1, corner2).getLocations();
+    }
+
+    public CompletableFuture<List<Location>> getLocationsAsync() {
+        return new LocationProcessor(corner1, corner2).getLocationsAsync();
     }
 
     public int getMinX() {

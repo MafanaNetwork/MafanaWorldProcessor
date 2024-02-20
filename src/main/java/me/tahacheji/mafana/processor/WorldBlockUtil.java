@@ -19,12 +19,12 @@ public class WorldBlockUtil {
         return gson.toJson(worldBlocks);
     }
 
-    public List<Location> decompressJsonToLocations(String json) {
+    public IgnoreLocation decompressJsonToLocations(String json) {
         Gson gson = new Gson();
-        return gson.fromJson(json, new TypeToken<List<Location>>() {}.getType());
+        return gson.fromJson(json, new TypeToken<IgnoreLocation>() {}.getType());
     }
 
-    public String compressLocationsToJson(List<Location> locationList) {
+    public String compressLocationsToJson(IgnoreLocation locationList) {
         Gson gson = new Gson();
         return gson.toJson(locationList);
     }

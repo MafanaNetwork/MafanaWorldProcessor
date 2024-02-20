@@ -26,12 +26,9 @@ public class PlayerLoadChunk implements Listener {
 
     @EventHandler
     public void onChunkLoad(PlayerChunkLoadEvent event) {
-
         Chunk loadedChunk = event.getChunk();
         Player player = event.getPlayer();
-
         Set<Chunk> processedChunks = processedChunksMap.computeIfAbsent(player, k -> new HashSet<>());
-
         if (!processedChunks.contains(loadedChunk)) {
             new BukkitRunnable() {
                 @Override
@@ -43,7 +40,7 @@ public class PlayerLoadChunk implements Listener {
                     }
                     processedChunks.add(loadedChunk);
                 }
-            }.runTask(MafanaWorldProcessor.getInstance());
+            }.runTaskAsynchronously(MafanaWorldProcessor.getInstance());
         }
     }
 
@@ -51,7 +48,6 @@ public class PlayerLoadChunk implements Listener {
     public void onChunkUnload(PlayerChunkUnloadEvent event) {
         Chunk unloadedChunk = event.getChunk();
         Player player = event.getPlayer();
-
         Set<Chunk> processedChunks = processedChunksMap.get(player);
         if (processedChunks != null) {
             processedChunks.remove(unloadedChunk);

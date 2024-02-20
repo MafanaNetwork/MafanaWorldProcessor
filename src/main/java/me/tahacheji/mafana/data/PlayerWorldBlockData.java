@@ -1,8 +1,5 @@
 package me.tahacheji.mafana.data;
 
-import me.TahaCheji.mysqlData.MySQL;
-import me.TahaCheji.mysqlData.MysqlValue;
-import me.TahaCheji.mysqlData.SQLGetter;
 import me.tahacheji.mafana.MafanaWorldProcessor;
 import me.tahacheji.mafana.processor.BlockManager;
 import org.bukkit.Bukkit;
@@ -12,93 +9,113 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class PlayerWorldBlockData extends MySQL {
     SQLGetter sqlGetter = new SQLGetter(this);
+
     public PlayerWorldBlockData() {
         super("162.254.145.231", "3306", "51252", "51252", "346a1ef0fc");
     }
 
-    public void addPlayerWorldBlocks(Player target, String id) {
-        UUID uuid = UUID.randomUUID();
-        sqlGetter.setString(new MysqlValue("WORLD_BLOCK_ID", uuid, id));
-        sqlGetter.setString(new MysqlValue("PLAYER_UUID", uuid, target.getUniqueId().toString()));
-        sqlGetter.setString(new MysqlValue("PACKET_UUID", uuid, uuid.toString()));
+    public CompletableFuture<Void> addPlayerWorldBlocks(Player target, String id) {
+        return CompletableFuture.supplyAsync(() -> {
+            UUID uuid = UUID.randomUUID();
+            sqlGetter.setStringAsync(new DatabaseValue("WORLD_BLOCK_ID", uuid, id));
+            sqlGetter.setStringAsync(new DatabaseValue("PLAYER_UUID", uuid, target.getUniqueId().toString()));
+            sqlGetter.setStringAsync(new DatabaseValue("PACKET_UUID", uuid, uuid.toString()));
+            return null;
+        });
     }
 
-    public BlockManager getBlockManager(Player target, String id) {
-        try {
-            List<String> idList = sqlGetter.getAllString(new MysqlValue("WORLD_BLOCK_ID"));
-            List<String> playerID = sqlGetter.getAllString(new MysqlValue("PLAYER_UUID"));
-            for(String i : idList) {
-                if(i.equalsIgnoreCase(id)) {
-                    for(String m : playerID) {
-                        if(m.equalsIgnoreCase(target.getUniqueId().toString())) {
-                            return new BlockManager(target, MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(id));
+    public CompletableFuture<BlockManager> getBlockManager(Player target, String id) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<String> idList = sqlGetter.getAllStringAsync(new DatabaseValue("WORLD_BLOCK_ID")).get();
+                List<String> playerID = sqlGetter.getAllStringAsync(new DatabaseValue("PLAYER_UUID")).get();
+                for (String i : idList) {
+                    if (i.equalsIgnoreCase(id)) {
+                        for (String m : playerID) {
+                            if (m.equalsIgnoreCase(target.getUniqueId().toString())) {
+                                return new BlockManager(target, MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(id).get());
+                            }
                         }
                     }
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception ignore) {
-
-        }
-        return null;
+            return null;
+        });
     }
 
-    public List<BlockManager> getAllPlayerBlockManager(Player player) {
-        List<BlockManager> blockManagers = new ArrayList<>();
-        for(BlockManager blockManager : getAllBlockManagers()) {
-            if(blockManager.getTargetPlayer().getUniqueId().toString().equalsIgnoreCase(player.getUniqueId().toString())) {
-                blockManagers.add(blockManager);
-            }
-        }
-        return blockManagers;
-    }
-
-    public List<BlockManager> getAllBlockManagers() {
-        List<BlockManager> blockManagers = new ArrayList<>();
-        try {
-            List<UUID> uuids = sqlGetter.getAllUUID(new MysqlValue("UUID"));
-            List<String> idList = sqlGetter.getAllString(new MysqlValue("WORLD_BLOCK_ID"));
-            List<String> playerID = sqlGetter.getAllString(new MysqlValue("PLAYER_UUID"));
-            for (int i = 0; i < uuids.size(); i++) {
-                String x = idList.get(i);
-                String p = playerID.get(i);
-                if(Bukkit.getPlayer(UUID.fromString(p)) != null) {
-                    blockManagers.add(new BlockManager(Bukkit.getPlayer(UUID.fromString(p)), MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(x)));
-                }
-            }
-        } catch (Exception ignore) {
-
-        }
-        return blockManagers;
-    }
-    public void removePlayerBuild(OfflinePlayer target, String id) {
-        try {
-            List<UUID> uuids = sqlGetter.getAllUUID(new MysqlValue("UUID"));
-            List<String> idList = sqlGetter.getAllString(new MysqlValue("WORLD_BLOCK_ID"));
-            List<String> playerID = sqlGetter.getAllString(new MysqlValue("PLAYER_UUID"));
-            for (int i = 0; i < uuids.size(); i++) {
-                String x = idList.get(i);
-                String p = playerID.get(i);
-                if(x.equalsIgnoreCase(id)) {
-                    if(p.equalsIgnoreCase(target.getUniqueId().toString())) {
-                        sqlGetter.removeString(uuids.get(i).toString(), new MysqlValue("PACKET_UUID"));
+    public CompletableFuture<List<BlockManager>> getAllPlayerBlockManager(Player player) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<BlockManager> blockManagers = new ArrayList<>();
+            try {
+                for (BlockManager blockManager : getAllBlockManagers().get()) {
+                    if (blockManager.getTargetPlayer().getUniqueId().toString().equalsIgnoreCase(player.getUniqueId().toString())) {
+                        blockManagers.add(blockManager);
                     }
                 }
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
             }
-        } catch (Exception ignore) {
+            return blockManagers;
+        });
+    }
 
-        }
+    public CompletableFuture<List<BlockManager>> getAllBlockManagers() {
+        return CompletableFuture.supplyAsync(() -> {
+            List<BlockManager> blockManagers = new ArrayList<>();
+            try {
+                List<UUID> uuids = sqlGetter.getAllUUIDAsync(new DatabaseValue("UUID")).get();
+                List<String> idList = sqlGetter.getAllStringAsync(new DatabaseValue("WORLD_BLOCK_ID")).get();
+                List<String> playerID = sqlGetter.getAllStringAsync(new DatabaseValue("PLAYER_UUID")).get();
+                for (int i = 0; i < uuids.size(); i++) {
+                    String x = idList.get(i);
+                    String p = playerID.get(i);
+                    if (Bukkit.getPlayer(UUID.fromString(p)) != null) {
+                        blockManagers.add(new BlockManager(Bukkit.getPlayer(UUID.fromString(p)), MafanaWorldProcessor.getInstance().getWorldBlockData().getBlocks(x).get()));
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return blockManagers;
+        });
+    }
+
+    public CompletableFuture<Void> removePlayerBuild(OfflinePlayer target, String id) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                List<UUID> uuids = sqlGetter.getAllUUIDAsync(new DatabaseValue("UUID")).get();
+                List<String> idList = sqlGetter.getAllStringAsync(new DatabaseValue("WORLD_BLOCK_ID")).get();
+                List<String> playerID = sqlGetter.getAllStringAsync(new DatabaseValue("PLAYER_UUID")).get();
+                for (int i = 0; i < uuids.size(); i++) {
+                    String x = idList.get(i);
+                    String p = playerID.get(i);
+                    if (x.equalsIgnoreCase(id)) {
+                        if (p.equalsIgnoreCase(target.getUniqueId().toString())) {
+                            sqlGetter.removeString(uuids.get(i).toString(), new DatabaseValue("PACKET_UUID"));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        });
     }
 
     @Override
     public void connect() {
         super.connect();
         if (this.isConnected()) sqlGetter.createTable("player_packet_blocks",
-                new MysqlValue("WORLD_BLOCK_ID", ""),
-                new MysqlValue("PLAYER_UUID", ""),
-                new MysqlValue("PACKET_UUID", ""));
+                new DatabaseValue("WORLD_BLOCK_ID", ""),
+                new DatabaseValue("PLAYER_UUID", ""),
+                new DatabaseValue("PACKET_UUID", ""));
     }
 
     @Override

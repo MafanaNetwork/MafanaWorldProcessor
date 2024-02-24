@@ -23,16 +23,14 @@ public class WorldBlockData extends MySQL {
     public CompletableFuture<List<WorldBlock>> getBlocks(String id) {
         return CompletableFuture.supplyAsync(() -> {
             UUID uuid = new EncryptionUtil().stringToUUID(id);
-            try {
-                if (sqlGetter.existsAsync(uuid).get()) {
-                    return new WorldBlockUtil().decompressJsonToWorldBlocks(sqlGetter.getString(uuid, new DatabaseValue("BLOCKS")));
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
+            if (sqlGetter.existsAsync(uuid).join()) {
+                String blocksString = sqlGetter.getStringAsync(uuid, new DatabaseValue("BLOCKS")).join();
+                return new WorldBlockUtil().decompressJsonToWorldBlocks(blocksString);
             }
             return new ArrayList<>();
         });
     }
+
 
     public CompletableFuture<Void> setBlocks(String id, Location x, Location y, List<Material> target, List<Material> exclude) {
         return CompletableFuture.supplyAsync(() -> {
@@ -41,28 +39,26 @@ public class WorldBlockData extends MySQL {
 
             CompletableFuture<List<List<WorldBlock>>> future = worldProcessor.processCubeAsync();
             future.thenAccept(cubeBlocksList -> {
-                try {
-                    if (sqlGetter.existsAsync(uuid).get()) {
-                        List<WorldBlock> worldBlocks = new ArrayList<>();
-                        for (List<WorldBlock> l : cubeBlocksList) {
-                            worldBlocks.addAll(l);
-                        }
-                        sqlGetter.setStringAsync(new DatabaseValue("BLOCKS", uuid, new WorldBlockUtil().compressWorldBlocksToJson(worldBlocks)));
-                    } else {
-                        List<WorldBlock> worldBlocks = new ArrayList<>();
-                        for (List<WorldBlock> l : cubeBlocksList) {
-                            worldBlocks.addAll(l);
-                        }
-                        sqlGetter.setStringAsync(new DatabaseValue("NAME", uuid, id));
-                        sqlGetter.setStringAsync(new DatabaseValue("BLOCKS", uuid, new WorldBlockUtil().compressWorldBlocksToJson(worldBlocks)));
+                if (sqlGetter.existsAsync(uuid).join()) {
+                    List<WorldBlock> worldBlocks = new ArrayList<>();
+                    for (List<WorldBlock> l : cubeBlocksList) {
+                        worldBlocks.addAll(l);
                     }
-                } catch (InterruptedException | ExecutionException e) {
-                    throw new RuntimeException(e);
+                    sqlGetter.setStringAsync(new DatabaseValue("BLOCKS", uuid, new WorldBlockUtil().compressWorldBlocksToJson(worldBlocks))).join();
+                } else {
+                    List<WorldBlock> worldBlocks = new ArrayList<>();
+                    for (List<WorldBlock> l : cubeBlocksList) {
+                        worldBlocks.addAll(l);
+                    }
+                    sqlGetter.setStringAsync(new DatabaseValue("NAME", uuid, id)).join();
+                    sqlGetter.setStringAsync(new DatabaseValue("BLOCKS", uuid, new WorldBlockUtil().compressWorldBlocksToJson(worldBlocks))).join();
                 }
+
             });
             return null;
         });
     }
+
 
     public CompletableFuture<List<String>> getAllNames() {
         try {
@@ -84,14 +80,10 @@ public class WorldBlockData extends MySQL {
 
     public CompletableFuture<String> getBuildFromName(String s) {
         return CompletableFuture.supplyAsync(() -> {
-            try {
-                for (String x : getAllNames().get()) {
-                    if (x.equalsIgnoreCase(s)) {
-                        return x;
-                    }
+            for (String x : getAllNames().join()) {
+                if (x.equalsIgnoreCase(s)) {
+                    return x;
                 }
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
             }
             return "";
         });

@@ -26,35 +26,37 @@ public class IgnoreLocationDatabase extends MySQL {
             IgnoreLocation i1 = new IgnoreLocation(p1.getWorld().getName(), (int) p1.getX(), (int) p1.getY(), (int) p1.getZ());
             IgnoreLocation i2 = new IgnoreLocation(p2.getWorld().getName(), (int) p2.getX(), (int) p2.getY(), (int) p2.getZ());
             try {
-                if (!sqlGetter.existsAsync(uuid).get()) {
-                    sqlGetter.setStringAsync(new DatabaseValue("ID", new EncryptionUtil().stringToUUID(id), id));
+                if (!sqlGetter.existsAsync(uuid).join()) {
+                    sqlGetter.setStringAsync(new DatabaseValue("ID", new EncryptionUtil().stringToUUID(id), id)).join();
                 }
-            } catch (InterruptedException | ExecutionException e) {
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            sqlGetter.setStringAsync(new DatabaseValue("P1", new EncryptionUtil().stringToUUID(id), new WorldBlockUtil().compressLocationsToJson(i1)));
-            sqlGetter.setStringAsync(new DatabaseValue("P2", new EncryptionUtil().stringToUUID(id), new WorldBlockUtil().compressLocationsToJson(i2)));
+            sqlGetter.setStringAsync(new DatabaseValue("P1", new EncryptionUtil().stringToUUID(id), new WorldBlockUtil().compressLocationsToJson(i1))).join();
+            sqlGetter.setStringAsync(new DatabaseValue("P2", new EncryptionUtil().stringToUUID(id), new WorldBlockUtil().compressLocationsToJson(i2))).join();
             return null;
         });
     }
+
 
     public CompletableFuture<List<IgnoreLocation>> getIgnoredLocation(String id) {
         return CompletableFuture.supplyAsync(() -> {
             UUID uuid = new EncryptionUtil().stringToUUID(id);
             List<IgnoreLocation> ignoreLocations = new ArrayList<>();
             try {
-                ignoreLocations.add(new WorldBlockUtil().decompressJsonToLocations(sqlGetter.getStringAsync(uuid, new DatabaseValue("P1")).get()));
-            } catch (InterruptedException | ExecutionException e) {
+                ignoreLocations.add(new WorldBlockUtil().decompressJsonToLocations(sqlGetter.getStringAsync(uuid, new DatabaseValue("P1")).join()));
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
             try {
-                ignoreLocations.add(new WorldBlockUtil().decompressJsonToLocations(sqlGetter.getStringAsync(uuid, new DatabaseValue("P2")).get()));
-            } catch (InterruptedException | ExecutionException e) {
+                ignoreLocations.add(new WorldBlockUtil().decompressJsonToLocations(sqlGetter.getStringAsync(uuid, new DatabaseValue("P2")).join()));
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
             return ignoreLocations;
         });
     }
+
 
     public CompletableFuture<List<String>> getAllIDs() {
         try {

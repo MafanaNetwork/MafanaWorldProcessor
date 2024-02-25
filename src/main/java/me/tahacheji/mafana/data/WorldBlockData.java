@@ -71,7 +71,7 @@ public class WorldBlockData extends MySQL {
 
     public List<String> getAllNamesSync() {
         try {
-            return sqlGetter.getAllString(new DatabaseValue("NAME"));
+            return sqlGetter.getAllStringSync(new DatabaseValue("NAME"));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -103,10 +103,8 @@ public class WorldBlockData extends MySQL {
         return sqlGetter.removeStringAsync(id, new DatabaseValue("NAME"));
     }
 
-    @Override
     public void connect() {
-        super.connect();
-        if (this.isConnected()) sqlGetter.createTable("world_blocks",
+        sqlGetter.createTable("world_blocks",
                 new DatabaseValue("NAME", ""),
                 new DatabaseValue("BLOCKS", ""));
     }

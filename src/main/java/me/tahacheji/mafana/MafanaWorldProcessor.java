@@ -77,9 +77,9 @@ public final class MafanaWorldProcessor extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        worldBlockData.disconnect();
-        ignoreLocationDatabase.disconnect();
-        playerWorldBlockData.disconnect();
+        worldBlockData.close();
+        ignoreLocationDatabase.close();
+        playerWorldBlockData.close();
     }
 
     public PlayerEditor getPlayerEditor(Player player) {

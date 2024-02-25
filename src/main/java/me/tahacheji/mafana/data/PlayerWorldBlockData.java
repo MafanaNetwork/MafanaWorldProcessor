@@ -100,7 +100,7 @@ public class PlayerWorldBlockData extends MySQL {
                     String x = idList.get(i);
                     String p = playerID.get(i);
                     if (x.equalsIgnoreCase(id) && p.equalsIgnoreCase(target.getUniqueId().toString())) {
-                        sqlGetter.removeString(uuids.get(i).toString(), new DatabaseValue("PACKET_UUID"));
+                        sqlGetter.removeStringAsync(uuids.get(i).toString(), new DatabaseValue("PACKET_UUID"));
                     }
                 }
             } catch (Exception e) {
@@ -111,10 +111,8 @@ public class PlayerWorldBlockData extends MySQL {
     }
 
 
-    @Override
     public void connect() {
-        super.connect();
-        if (this.isConnected()) sqlGetter.createTable("player_packet_blocks",
+        sqlGetter.createTable("player_packet_blocks",
                 new DatabaseValue("WORLD_BLOCK_ID", ""),
                 new DatabaseValue("PLAYER_UUID", ""),
                 new DatabaseValue("PACKET_UUID", ""));

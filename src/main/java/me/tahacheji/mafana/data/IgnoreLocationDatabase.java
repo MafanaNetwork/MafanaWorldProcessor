@@ -67,10 +67,8 @@ public class IgnoreLocationDatabase extends MySQL {
         return new CompletableFuture<>();
     }
 
-    @Override
     public void connect() {
-        super.connect();
-        if (this.isConnected()) sqlGetter.createTable("ignore_locations",
+        sqlGetter.createTable("ignore_locations",
                 new DatabaseValue("ID", ""),
                 new DatabaseValue("P1", ""),
                 new DatabaseValue("P2", ""));

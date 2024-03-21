@@ -24,7 +24,7 @@ import java.util.List;
 public class Pointer extends GameItem {
 
     public Pointer() {
-        super(ChatColor.GOLD + "Pointer", Material.STICK, true, ChatColor.GRAY + "Left Click To Set Location 1", ChatColor.GOLD + "L1: ", ChatColor.GRAY + "Right Click To Set Location 2", ChatColor.GOLD + "L2: ");
+        super("POINTER", ChatColor.GOLD + "Pointer", Material.STICK, true, ChatColor.GRAY + "Left Click To Set Location 1", ChatColor.GOLD + "L1: ", ChatColor.GRAY + "Right Click To Set Location 2", ChatColor.GOLD + "L2: ");
         MafanaNetwork.getInstance().getGameItems().add(this);
     }
 

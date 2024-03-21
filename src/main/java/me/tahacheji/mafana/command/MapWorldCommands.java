@@ -37,6 +37,23 @@ public class MapWorldCommands {
         player.sendMessage(ChatColor.GREEN + "Teleported to world: " + z);
     }
 
+    @Command(names = {"mwp map tp"}, permission = "mafana.admin", playerOnly = true)
+    public void tpWorld(Player player, @Param(name = "world") String z) {
+
+        World world = Bukkit.getWorld(z);
+
+        if (world == null) {
+            world = Bukkit.createWorld(new WorldCreator(z));
+            if (world == null) {
+                player.sendMessage(ChatColor.RED + "Failed to load world: " + z);
+                return;
+            }
+        }
+
+        player.teleport(world.getSpawnLocation());
+        player.sendMessage(ChatColor.GREEN + "Teleported to world: " + world.getName());
+    }
+
     @Command(names = {"mwp map load"}, permission = "mafana.admin", playerOnly = true)
     public void loadMap(Player player, @Param(name = "source") String z, @Param(name = "world") String w, @Param(name = "loadOnInit") boolean t) {
         GameMap gameMap = new LocalGameMap(new File(z, "worlds"), w, t);
@@ -57,7 +74,6 @@ public class MapWorldCommands {
                 new FileUtil().deleteWorldFolder(destinationFolder);
             }
 
-            // Copy the world folder to the destination folder
             new FileUtil().copyFolder(sourceWorldFolder, destinationFolder);
 
             player.sendMessage(ChatColor.GREEN + "World copied to: " + destinationFolder.getAbsolutePath());

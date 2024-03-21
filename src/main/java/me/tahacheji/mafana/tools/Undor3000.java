@@ -10,7 +10,7 @@ import org.bukkit.inventory.ItemStack;
 
 public class Undor3000 extends GameItem {
     public Undor3000() {
-        super(ChatColor.DARK_PURPLE + "Undor3000!", Material.SUGAR, true, ChatColor.GRAY + "Right click to undo latest!");
+        super("UNDOR3000", ChatColor.DARK_PURPLE + "Undor3000!", Material.SUGAR, true, ChatColor.GRAY + "Right click to undo latest!");
         MafanaNetwork.getInstance().getGameItems().add(this);
     }
 

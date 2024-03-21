@@ -30,7 +30,7 @@ public class Shifter extends GameItem {
     private final long delayBetweenBatches;
 
     public Shifter(int tX, int tY, int tZ, double rX, double rY, double rZ, int bS, long dBB) {
-        super(ChatColor.GREEN + "Shifter", Material.RABBIT_HIDE, true,
+        super("SHIFTER",ChatColor.GREEN + "Shifter", Material.RABBIT_HIDE, true,
                 ChatColor.GOLD + "Translate X: " + ChatColor.WHITE + tX,
                 ChatColor.GOLD + "Translate Y: " + ChatColor.WHITE + tY,
                 ChatColor.GOLD + "Translate Z: " + ChatColor.WHITE + tZ,

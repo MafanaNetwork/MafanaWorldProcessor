@@ -27,7 +27,7 @@ public class IgnoreLocationDatabase extends MySQL {
             IgnoreLocation i2 = new IgnoreLocation(p2.getWorld().getName(), (int) p2.getX(), (int) p2.getY(), (int) p2.getZ());
             try {
                 if (!sqlGetter.existsAsync(uuid).join()) {
-                    sqlGetter.setStringAsync(new DatabaseValue("ID", new EncryptionUtil().stringToUUID(id), id)).join();
+                    sqlGetter.setStringAsync(new DatabaseValue("NAME", new EncryptionUtil().stringToUUID(id), id)).join();
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -60,7 +60,7 @@ public class IgnoreLocationDatabase extends MySQL {
 
     public CompletableFuture<List<String>> getAllIDs() {
         try {
-            return sqlGetter.getAllStringAsync(new DatabaseValue("ID"));
+            return sqlGetter.getAllStringAsync(new DatabaseValue("NAME"));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -69,7 +69,7 @@ public class IgnoreLocationDatabase extends MySQL {
 
     public void connect() {
         sqlGetter.createTable("ignore_locations",
-                new DatabaseValue("ID", ""),
+                new DatabaseValue("NAME", ""),
                 new DatabaseValue("P1", ""),
                 new DatabaseValue("P2", ""));
     }

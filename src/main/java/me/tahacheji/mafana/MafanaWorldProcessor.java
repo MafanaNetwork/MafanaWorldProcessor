@@ -14,10 +14,12 @@ import me.tahacheji.mafana.processor.IgnoreLocation;
 import me.tahacheji.mafana.util.FileUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -76,14 +78,29 @@ public final class MafanaWorldProcessor extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Save all worlds before deleting their folders
+        for (File worldFolder : new File(Bukkit.getWorldContainer().getPath()).listFiles()) {
+            if (worldFolder.isDirectory()) {
+                World world = Bukkit.getWorld(worldFolder.getName());
+                if (world != null) {
+                    world.save();
+                }
+            }
+        }
+
+        // Close any resources or databases
         worldBlockData.close();
         ignoreLocationDatabase.close();
         playerWorldBlockData.close();
-        for(GameMap gameMap : activeMaps) {
-            gameMap.unload();
-            new FileUtil().delete(gameMap.getLocalGameMap().getActiveWorldFolder());
+
+        // Delete active world folders
+        for (File worldFolder : new File(Bukkit.getWorldContainer().getPath()).listFiles()) {
+            if (worldFolder.isDirectory() && worldFolder.getName().contains("_active_game_map_")) {
+                new FileUtil().deleteWorldFolder(worldFolder);
+            }
         }
     }
+
 
     public PlayerEditor getPlayerEditor(Player player) {
         for(PlayerEditor playerEditor : getPlayerEditorList()) {

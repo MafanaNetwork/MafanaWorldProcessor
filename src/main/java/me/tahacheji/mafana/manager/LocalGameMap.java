@@ -28,7 +28,7 @@ public class LocalGameMap implements GameMap {
     public boolean load() {
         if(isLoaded()) return true;
         activeWorldFolder = new File(Bukkit.getWorldContainer().getParentFile(),
-                sourceWorldFolder.getName() + "_active_" +
+                sourceWorldFolder.getName() + "_active_game_map_" +
                         System.currentTimeMillis());
         try {
             new FileUtil().copyFolder(sourceWorldFolder, activeWorldFolder);
@@ -43,6 +43,29 @@ public class LocalGameMap implements GameMap {
             this.bukkitWorld.setAutoSave(false);
 
         }
+        bukkitWorld.setAutoSave(false);
+        MafanaWorldProcessor.getInstance().getActiveMaps().add(this);
+        return isLoaded();
+    }
+
+    public boolean loadMap() {
+        if(isLoaded()) return true;
+        activeWorldFolder = new File(Bukkit.getWorldContainer().getParentFile(),
+                sourceWorldFolder.getName());
+        try {
+            new FileUtil().copyFolder(sourceWorldFolder, activeWorldFolder);
+            isLoaded = true;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        this.bukkitWorld = Bukkit.createWorld(new WorldCreator(activeWorldFolder.getName()));
+
+        if(bukkitWorld != null) {
+            this.bukkitWorld.setAutoSave(false);
+
+        }
+        bukkitWorld.setAutoSave(false);
         MafanaWorldProcessor.getInstance().getActiveMaps().add(this);
         return isLoaded();
     }

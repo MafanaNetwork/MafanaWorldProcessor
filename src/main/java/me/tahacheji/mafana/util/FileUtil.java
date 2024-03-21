@@ -17,6 +17,23 @@ public class FileUtil {
         file.delete();
     }
 
+    public void deleteWorldFolder(File worldFolder) {
+        if (worldFolder.exists()) {
+            // Delete the world folder and all its contents recursively
+            File[] files = worldFolder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isDirectory()) {
+                        deleteWorldFolder(file);
+                    } else {
+                        file.delete();
+                    }
+                }
+            }
+            worldFolder.delete(); // Delete the empty directory
+        }
+    }
+
     public void copyFolder(File source, File target) throws IOException {
         try {
             ArrayList<String> ignore = new ArrayList<>(Arrays.asList("uid.dat", "session.lock"));
